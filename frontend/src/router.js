@@ -35,6 +35,10 @@ export class Router {
                     document.body.style.height = '100vh'
                     new Login()
                 },
+                unload: () => {
+                    document.body.classList.remove('login-page')
+                    document.body.style.height = 'auto'
+                },
                 styles: ['icheck-bootstrap.min.css'],
             },
             {
@@ -47,6 +51,10 @@ export class Router {
                     document.body.style.height = '100vh'
                     new SignUp()
                 },
+                unload: () => {
+                    document.body.classList.remove('register-page')
+                    document.body.style.height = 'auto'
+                },
                 styles: ['icheck-bootstrap.min.css'],
             },
         ]
@@ -55,9 +63,44 @@ export class Router {
     init_events() {
         window.addEventListener('DOMContentLoaded', this.activate_route.bind(this))
         window.addEventListener('popstate', this.activate_route.bind(this))
+        document.addEventListener('click', this.openNewRoute.bind(this))
     }
 
-    async activate_route() {
+    async openNewRoute(e) {
+        let element = null
+        if (e.target.nodeName === 'A') {
+            element = e.target
+        } else if (e.target.parentNode.nodeName === 'A') {
+            element = e.target.parentNode
+        }
+
+        if (element) {
+            e.preventDefault()
+
+            const url = element.href.replace(window.location.origin, '')
+            if (!url || url === '/#' || url.startsWith('javascript:void(0)')) {
+                return
+            }
+
+            const currentRoute = window.location.pathname
+            history.pushState({}, '', url)
+            await this.activate_route(null, currentRoute)
+        }
+    }
+
+    async activate_route(e, oldRoute=null) {
+        if (oldRoute) {
+            const currentRoute = this.routes.find(item => item.route === oldRoute)
+            if (currentRoute.styles && currentRoute.styles.length > 0) {
+                currentRoute.styles.forEach(style => {
+                    document.querySelector(`link[href='/css/${style}']`).remove()
+                })
+            }
+            if (currentRoute.unload && typeof currentRoute.unload === 'function') {
+                currentRoute.unload()
+            }
+        }
+
         const urlRoute = window.location.pathname
         const newRoute = this.routes.find(item => item.route === urlRoute)
         if (newRoute) {
@@ -73,7 +116,6 @@ export class Router {
             this.titlePageElement.innerText = newRoute.title ? `${newRoute.title} | Freelance Studio` : 'Freelance Studio'
 
             if (newRoute.filePathTemplate) {
-                document.body.className = ''
                 let contentBlock = this.contentPageElement
                 if (newRoute.useLayout) {
                     this.contentPageElement.innerHTML = await fetch(newRoute.useLayout).then(response => response.text())
@@ -89,10 +131,11 @@ export class Router {
 
             if (newRoute.load && typeof newRoute.load === 'function') {
                 newRoute.load()
-        }
+            }
         } else {
             console.log('No route found')
-            window.location = '/404'
+            history.pushState({}, '', '/404')
+            await this.activate_route()
         }
     }
 }

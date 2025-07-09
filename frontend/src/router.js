@@ -6,6 +6,7 @@ export class Router {
     constructor() {
         this.titlePageElement = document.getElementById('title')
         this.contentPageElement = document.getElementById('content')
+        this.adminLteStyleElement = document.getElementById('adminlte_style')
 
         this.init_events()
         this.routes = [
@@ -28,19 +29,25 @@ export class Router {
                 route: '/login',
                 title: 'Авторизация',
                 filePathTemplate: '/templates/login.html',
-                useLayout: '/templates/layout.html',
+                useLayout: false,
                 load: () => {
+                    document.body.classList.add('login-page')
+                    document.body.style.height = '100vh'
                     new Login()
                 },
+                styles: ['icheck-bootstrap.min.css'],
             },
             {
                 route: '/sign-up',
                 title: 'Регистрация',
                 filePathTemplate: '/templates/sign-up.html',
-                useLayout: '/templates/layout.html',
+                useLayout: false,
                 load: () => {
+                    document.body.classList.add('register-page')
+                    document.body.style.height = '100vh'
                     new SignUp()
                 },
+                styles: ['icheck-bootstrap.min.css'],
             },
         ]
     }
@@ -54,9 +61,19 @@ export class Router {
         const urlRoute = window.location.pathname
         const newRoute = this.routes.find(item => item.route === urlRoute)
         if (newRoute) {
+            if (newRoute.styles && newRoute.styles.length > 0) {
+                newRoute.styles.forEach(style => {
+                    const link = document.createElement('link')
+                    link.rel = 'stylesheet'
+                    link.href = '/css/' + style
+                    document.head.insertBefore(link, this.adminLteStyleElement)
+                })
+            }
+
             this.titlePageElement.innerText = newRoute.title ? `${newRoute.title} | Freelance Studio` : 'Freelance Studio'
 
             if (newRoute.filePathTemplate) {
+                document.body.className = ''
                 let contentBlock = this.contentPageElement
                 if (newRoute.useLayout) {
                     this.contentPageElement.innerHTML = await fetch(newRoute.useLayout).then(response => response.text())
